@@ -1,6 +1,5 @@
 repos:
-  - repo: https://github.com/MistressFilth/pydantic-guidance
-    rev: v0.1.1
+  - repo: local
     hooks:
       # Pydantic-guidance (PG) and PYD checks together.
       - id: pydantic-guidance
