@@ -1325,18 +1325,10 @@ git commit -m "feat: add PG205 project-settings suppression scanner"
 - Consumes: existing `PGPlugin.__init__(tree)`, `parse_options`, `run`.
 - Produces: a `PGPlugin` that:
   - In `parse_options`, loads `SuppressionRegistry` from `pyproject.toml`.
-  - In `__init__`, records `self._filename` (passed by flake8) and `self._project_root` (from `--pg-config-root`).
-  - In `run`, dispatches to `_scan_python` or `_scan_config` based on filename suffix.
+  - In `__init__`, declares `filename: str` as a parameter; flake8 fills it from `FileProcessor.filename` automatically per the documented plugin protocol (`docs/source/plugin-development/plugin-parameters.rst`). The plugin records `self._filename`.
+  - In `run`, dispatches to `_run_python` or `_run_config` based on filename suffix.
 
-flake8 plugins receive `options` with `pg_config_root` already parsed. The plugin must capture the filename via the `__init__` argument — flake8 passes `(tree, filename)` historically but the current flake8 only passes the tree. Verify by reading flake8's plugin protocol; if filename is not in `__init__`, capture it from `tree` location or use a module-level dispatch.
-
-Inspect flake8's signature for `__init__` in the installed version:
-
-```bash
-uv run python -c "import flake8, inspect; from pydantic_guidance.flake8_guidance import PGPlugin; print(inspect.signature(PGPlugin.__init__))"
-```
-
-If only `tree` is passed, the plugin uses a fallback: `tree is None` implies a non-Python file and the scanner dispatches on filename captured via `parse_options` or a separate sentinel. Adjust as needed in the implementation.
+flake8 plugins declare their parameter needs in `__init__`; flake8 supplies matching values from `FileProcessor`. `filename` is one of the documented available parameters. No shim, no monkey-patch, no new dependency.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1403,6 +1395,7 @@ from pydantic_guidance._suppression_scanner import (
 
 _PY_SUFFIXES = (".py", ".pyi")
 _CONFIG_SUFFIXES = (".toml", ".cfg", ".ini")
+_CONFIG_NAMES = (".flake8", "tox.ini")
 
 
 class PGPlugin:
@@ -1414,6 +1407,10 @@ class PGPlugin:
     gated by a registry in ``pyproject.toml``. The whole plugin is
     gated by ``[hooks].structured_data_enforcement`` in
     ``.true-spec/project/true-spec.toml``.
+
+    flake8 supplies ``filename`` to ``__init__`` from
+    ``FileProcessor.filename`` per the documented plugin protocol
+    (``docs/source/plugin-development/plugin-parameters.rst``).
     """
 
     name = "flake8-pydantic-guidance"
@@ -1423,8 +1420,9 @@ class PGPlugin:
     _project_root: str = os.getcwd()
     _registry: SuppressionRegistry = SuppressionRegistry()
 
-    def __init__(self, tree: ast.AST) -> None:
+    def __init__(self, tree: ast.AST, filename: str) -> None:
         self._tree = tree
+        self._filename = filename
 
     @staticmethod
     def _load_registry(root: Path) -> SuppressionRegistry:
@@ -1458,78 +1456,55 @@ class PGPlugin:
         if not self._enabled:
             return
 
-        # flake8 dispatches per file. We need the filename, but the
-        # AST-only __init__ signature doesn't carry it. Recover via
-        # the active flake8 checker's state when available.
-        filename = _active_filename()
         findings: list[GuidanceFinding] = []
-
-        if filename is not None and filename.endswith(_CONFIG_SUFFIXES):
-            findings.extend(self._run_config(filename))
-        elif filename is not None and filename.endswith(".flake8"):
-            findings.extend(self._run_config(filename))
+        if self._is_config():
+            findings.extend(self._run_config())
         elif isinstance(self._tree, ast.Module):
-            findings.extend(self._run_python(filename))
+            findings.extend(self._run_python())
 
         for f in findings:
             yield RESULT_ADAPTER.validate_python(
                 (f.line, f.col, f.message, type(self))
             )
 
-    def _run_python(self, filename: str | None) -> Iterator[GuidanceFinding]:
+    def _is_config(self) -> bool:
+        return (
+            self._filename.endswith(_CONFIG_SUFFIXES)
+            or any(self._filename.endswith("/" + n) or self._filename.endswith(n) for n in _CONFIG_NAMES)
+        )
+
+    def _run_python(self) -> Iterator[GuidanceFinding]:
         analyzer_findings = list(analyze(self._tree))  # type: ignore[arg-type]
-        # Read source for comment text.
         source = ""
-        if filename is not None:
-            try:
-                with open(filename, encoding="utf-8") as f:
-                    source = f.read()
-            except OSError:
-                source = ""
+        try:
+            with open(self._filename, encoding="utf-8") as f:
+                source = f.read()
+        except OSError:
+            source = ""
         yield from scan_comments(
             self._tree,  # type: ignore[arg-type]
             source,
-            file_path=filename,
+            file_path=self._filename,
             project_root=self._project_root,
             registry=self._registry,
             analyzer_findings=analyzer_findings,
         )
-        if filename is not None:
-            yield from scan_stale_registry(
-                self._registry,
-                file_path=filename,
-                project_root=self._project_root,
-                analyzer_findings=analyzer_findings,
-            )
+        yield from scan_stale_registry(
+            self._registry,
+            file_path=self._filename,
+            project_root=self._project_root,
+            analyzer_findings=analyzer_findings,
+        )
         yield from analyzer_findings
 
-    def _run_config(self, filename: str) -> Iterator[GuidanceFinding]:
-        path = Path(filename)
+    def _run_config(self) -> Iterator[GuidanceFinding]:
+        path = Path(self._filename)
         try:
             source = path.read_text(encoding="utf-8")
         except OSError:
             return
         yield from scan_config(path, source)
-
-
-def _active_filename() -> str | None:
-    """Recover the filename currently being linted.
-
-    flake8 doesn't pass the filename to plugin ``__init__``. We sniff
-    the active checker via the ``flake8`` runtime; if unavailable
-    (e.g., direct unit tests), return None and skip per-file findings.
-    """
-    try:
-        from flake8.checker import FileChecker  # type: ignore[import-not-found]
-        checker = FileChecker._active_checker  # type: ignore[attr-defined]
-        if checker is not None:
-            return checker.filename  # type: ignore[no-any-return]
-    except Exception:
-        return None
-    return None
 ```
-
-**Note:** `_active_filename` is a pragmatic shim. If flake8's API moves, replace with an officially-supported path (e.g., reading `self.filename` if flake8 starts passing it). The shim is local and small enough to maintain.
 
 - [ ] **Step 4: Run plugin tests**
 
