@@ -24,6 +24,16 @@
 - `scan_config` now dispatches by recognized filename rather than
   suffix; accepts the TOML list form of `per-file-ignores` and
   `extend-ignore`.
+- `scan_stale_registry` resolves analyzer findings to their enclosing
+  FQN before comparing against registry entries, so PG204 fires per
+  construct rather than per code.
+- `scan_stale_registry` special-cases `__init__.py` to require exact
+  FQN match (no submodule prefix), preventing false positives on
+  package init files.
+
+### Fixed
+- `flake8-pydantic` and other dependencies installed via pre-commit no
+  longer trip over an unanchored local hook definition.
 
 ### Required Human Gate
 - Registry edits require `CODEOWNERS`-gated human review on
