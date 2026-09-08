@@ -12,8 +12,6 @@ path plus the smallest enclosing ``ClassDef`` / ``FunctionDef`` /
 ``AsyncFunctionDef`` chain found in the AST.
 """
 
-from __future__ import annotations
-
 import ast
 from pathlib import Path
 
@@ -92,7 +90,7 @@ class FQNResolver:
 
         Returns ``None`` if ``fqn`` is not in the tree. The module path
         itself (``fqn == self._module``) maps to the file's first line,
-        since there is no scope-bearing node for it. Used by PG204 to
+        since there is no scope-bearing node for it. Used by SL204 to
         report a location for stale registry entries.
         """
         if fqn == self._module:

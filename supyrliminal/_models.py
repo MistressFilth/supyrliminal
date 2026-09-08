@@ -1,13 +1,11 @@
-"""Linter models — GuidanceFinding, HooksConfig, RulesConfig, SuppressionEntry, SuppressionRegistry."""
-
-from __future__ import annotations
+"""Linter models — GuidanceFinding, SuppressionEntry, SuppressionRegistry."""
 
 import pydantic
 from pydantic import BaseModel, ConfigDict
 
 
 class GuidanceFinding(BaseModel):
-    """A single pydantic-guidance finding emitted by the PG linter."""
+    """A single Supyrliminal finding emitted by the SL linter."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -17,39 +15,13 @@ class GuidanceFinding(BaseModel):
     message: str
 
 
-class HooksConfig(BaseModel):
-    """Typed configuration for the [hooks] section of .true-spec/project/true-spec.toml.
-
-    Only ``structured_data_enforcement`` is read: it gates the whole PG
-    plugin on or off. Safe defaults apply (enforcement on) when the TOML is
-    absent or malformed.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    structured_data_enforcement: bool = True
-
-
-class RulesConfig(BaseModel):
-    """Typed configuration for the [rules] section of .true-spec/project/true-spec.toml.
-
-    The legacy ``structured_data`` mode switch and ``allow_raw_collections``
-    override are removed: the PG linter is boundary-aware and no longer gated
-    by a pydantic-vs-dataclass mode. The class is retained so future advisory
-    rule settings have a home.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-
 class SuppressionEntry(BaseModel):
     """One authorized suppression, declared in pyproject.toml.
 
     ``fqn`` is the AST-stable identifier of the construct being suppressed
-    (function, method, nested class, or module). ``code`` is the PG/PYD
-    code authorized for that construct. ``approved_by`` and ``approved_sha``
-    are an audit trail; the HITL gate is enforced via CODEOWNERS on
-    ``pyproject.toml``, not by this model.
+    (function, method, nested class, or module). ``code`` is the SL/PYD
+    code authorized for that construct. The registry in ``pyproject.toml``
+    is the auditable record.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -57,12 +29,10 @@ class SuppressionEntry(BaseModel):
     fqn: str
     code: str
     reason: str
-    approved_by: str
-    approved_sha: str
 
 
 class SuppressionRegistry(BaseModel):
-    """The full registry as parsed from [tool.pydantic_guidance.suppressions].
+    """The full registry as parsed from [tool.supyrliminal.suppressions].
 
     Duplicate ``(fqn, code)`` pairs are rejected: silent override would mask
     intent. The pair is the natural key.

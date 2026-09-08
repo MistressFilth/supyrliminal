@@ -1,4 +1,4 @@
-.PHONY: help init sync unit-test features-test test clean lint typecheck format check release
+.PHONY: help init sync unit-test test clean lint typecheck format check release
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -12,10 +12,7 @@ sync: ## Update an existing environment to match current config
 unit-test: sync ## Run unit tests
 	.venv/bin/python -m pytest tests/unit/ -v
 
-features-test: sync ## Run behavior/feature tests
-	.venv/bin/python -m pytest tests/features/ -v
-
-test: unit-test features-test ## Run all tests
+test: unit-test ## Run all tests
 
 clean: ## Remove build and cache artifacts
 	rm -rf .pytest_cache .ruff_cache .mypy_cache
@@ -25,13 +22,13 @@ clean: ## Remove build and cache artifacts
 lint: sync ## Run linters
 	uvx ruff check .
 
-typecheck: sync ## Type-check the package source and tests
-	.venv/bin/python -m mypy pydantic_guidance tests/features/
+typecheck: sync ## Type-check the package source
+	.venv/bin/python -m mypy supyrliminal
 
 format: sync ## Auto-format source files
 	uvx ruff format .
 
 check: lint typecheck format ## Run lint, typecheck, and format
 
-release: ## Build, tag, and release a new version (bumps version, updates CHANGELOG, runs CI checks, pushes tag)
+release: ## Build, tag, and release a new version
 	@echo "Release workflow lives outside this Makefile; see CHANGELOG.md and pyproject.toml."

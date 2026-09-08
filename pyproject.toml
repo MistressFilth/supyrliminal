@@ -1,29 +1,28 @@
 [project]
-name = "pydantic-guidance"
-description = "Boundary-aware Pydantic-guidance linter (PG) for flake8"
-version = "0.2.0"
+name = "supyrliminal"
+description = "Boundary-aware Pydantic linter (SL) for flake8"
+version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = ["pydantic>=2.0", "flake8>=5.0", "flake8-pydantic>=0.4"]
 
 [project.scripts]
-flake8 = "flake8.main.cli:main"
-pg-scan-config = "pydantic_guidance._pg205_cli:main"
+supyrliminal = "supyrliminal._cli:main"
+sl = "supyrliminal._cli:main"
 
 [project.entry-points."flake8.extension"]
-PG = "pydantic_guidance.flake8_guidance:PGPlugin"
+SL = "supyrliminal.flake8_supyrliminal:SLPlugin"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pydantic_guidance"]
-include = ["pydantic_guidance/_rules/*.md"]
+packages = ["supyrliminal"]
+include = ["supyrliminal/_rules/*.md"]
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "pytest-bdd>=7.0",
     "mypy>=2.0.0",
 ]
 

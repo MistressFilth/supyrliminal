@@ -1,12 +1,10 @@
 """Load the suppression registry from pyproject.toml.
 
-The registry is the authorization back-end for every `# noqa: PGxxx` /
-`# noqa: PYDxxx` comment. Every entry is reviewed via CODEOWNERS on
+The registry is the authorization back-end for every `# noqa: SLxxx` /
+`# noqa: PYDxxx` comment. Every entry is reviewed via the suppression registry
 ``pyproject.toml``; the linter only checks that comments match a
 registry entry.
 """
-
-from __future__ import annotations
 
 import sys
 import tomllib
@@ -14,7 +12,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from pydantic_guidance._models import SuppressionEntry, SuppressionRegistry
+from supyrliminal._models import SuppressionEntry, SuppressionRegistry
 
 
 def _dedupe_valid(
@@ -39,15 +37,15 @@ def _dedupe_valid(
         kept.append(entry)
     if dropped:
         print(
-            f"pydantic-guidance: dropped {dropped} duplicate suppression "
-            "entries (see [tool.pydantic_guidance.suppressions] in pyproject.toml)",
+            f"supyrliminal: dropped {dropped} duplicate suppression "
+            "entries (see [tool.supyrliminal.suppressions] in pyproject.toml)",
             file=sys.stderr,
         )
     return tuple(kept)
 
 
 def load(root: Path) -> SuppressionRegistry:
-    """Load `[tool.pydantic_guidance.suppressions]` from ``root/pyproject.toml``.
+    """Load `[tool.supyrliminal.suppressions]` from ``root/pyproject.toml``.
 
     Returns an empty registry when the file is absent, the section is
     absent, or parsing fails. Malformed entries are silently dropped
@@ -61,7 +59,7 @@ def load(root: Path) -> SuppressionRegistry:
             data = tomllib.load(f)
     except (tomllib.TOMLDecodeError, OSError):
         return SuppressionRegistry()
-    section = data.get("tool", {}).get("pydantic_guidance", {})
+    section = data.get("tool", {}).get("supyrliminal", {})
     raw = section.get("suppressions", [])
     if not isinstance(raw, list):
         return SuppressionRegistry()

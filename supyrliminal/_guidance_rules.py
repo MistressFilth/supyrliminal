@@ -1,38 +1,36 @@
-"""Pure AST analyzer for pydantic-guidance (PG) findings.
+"""Pure AST analyzer for Supyrliminal (SL) findings.
 
-The analyzer is the single brain of the PG linter: it takes a parsed
+The analyzer is the single brain of the SL linter: it takes a parsed
 ``ast.Module`` and returns a deduped, ordered list of ``GuidanceFinding``
 objects. It does not invoke flake8, pydantic validation, or I/O; the
 ``GuidanceFinding`` carrier is the only outbound dependency. The
-``flake8_guidance`` plugin wraps it as the yield source for ``run()``.
+``flake8_supyrliminal`` plugin wraps it as the yield source for ``run()``.
 """
-
-from __future__ import annotations
 
 import ast
 
-from pydantic_guidance._model_detect import (
+from supyrliminal._model_detect import (
     collect_basemodel_names,
     is_basemodel_class,
     is_rootmodel_class,
     resolves_to_name,
     uses_pydantic_surface,
 )
-from pydantic_guidance._models import GuidanceFinding
+from supyrliminal._models import GuidanceFinding
 
-_PG001_MSG = (
-    "PG001 TypeAdapter constructed inside a function — "
+_SL001_MSG = (
+    "SL001 TypeAdapter constructed inside a function — "
     "build it once at module scope and reuse it"
 )
-_PG002_MSG = (
-    "PG002 TypeAdapter used as a field annotation — "
+_SL002_MSG = (
+    "SL002 TypeAdapter used as a field annotation — "
     "use RootModel for a reusable named root type; TypeAdapter is a tool, not a field type"
 )
-_PG003_MSG = (
-    "PG003 deprecated @root_validator — use @model_validator(mode='before'|'after')"
+_SL003_MSG = (
+    "SL003 deprecated @root_validator — use @model_validator(mode='before'|'after')"
 )
-_PG101_MSG = (
-    "PG101 BaseModel uses no Pydantic surface — "
+_SL101_MSG = (
+    "SL101 BaseModel uses no Pydantic surface — "
     "if this is internal code-built state, a stdlib @dataclass is lighter"
 )
 
@@ -40,7 +38,7 @@ _TYPEADAPTER = frozenset({"TypeAdapter"})
 _ROOT_VALIDATOR = frozenset({"root_validator"})
 
 
-def _check_pg001(tree: ast.Module) -> list[GuidanceFinding]:
+def _check_sl001(tree: ast.Module) -> list[GuidanceFinding]:
     """Flag ``TypeAdapter(...)`` constructed inside a function body.
 
     Module-scope construction is the performant pattern; a call inside a
@@ -74,14 +72,14 @@ def _check_pg001(tree: ast.Module) -> list[GuidanceFinding]:
                 GuidanceFinding(
                     line=node.lineno,
                     col=node.col_offset,
-                    code="PG001",
-                    message=_PG001_MSG,
+                    code="SL001",
+                    message=_SL001_MSG,
                 )
             )
     return findings
 
 
-def _check_pg002(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFinding]:
+def _check_sl002(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFinding]:
     """Flag ``TypeAdapter`` used as a field annotation inside a Pydantic model.
 
     A ``TypeAdapter`` is a validation tool, not a type; a field annotation
@@ -102,14 +100,14 @@ def _check_pg002(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFindin
                     GuidanceFinding(
                         line=item.annotation.lineno,
                         col=item.annotation.col_offset,
-                        code="PG002",
-                        message=_PG002_MSG,
+                        code="SL002",
+                        message=_SL002_MSG,
                     )
                 )
     return findings
 
 
-def _check_pg003(tree: ast.Module) -> list[GuidanceFinding]:
+def _check_sl003(tree: ast.Module) -> list[GuidanceFinding]:
     """Flag the deprecated ``@root_validator`` decorator (any form)."""
     findings: list[GuidanceFinding] = []
     for node in ast.walk(tree):
@@ -121,14 +119,14 @@ def _check_pg003(tree: ast.Module) -> list[GuidanceFinding]:
                     GuidanceFinding(
                         line=dec.lineno,
                         col=dec.col_offset,
-                        code="PG003",
-                        message=_PG003_MSG,
+                        code="SL003",
+                        message=_SL003_MSG,
                     )
                 )
     return findings
 
 
-def _check_pg101(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFinding]:
+def _check_sl101(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFinding]:
     """Soft-hint flag: a ``BaseModel`` subclass using no Pydantic surface.
 
     A model that declares no ``model_config``, ``Field(...)``, ``Annotated``
@@ -148,15 +146,15 @@ def _check_pg101(tree: ast.Module, known: frozenset[str]) -> list[GuidanceFindin
             GuidanceFinding(
                 line=node.lineno,
                 col=node.col_offset,
-                code="PG101",
-                message=_PG101_MSG,
+                code="SL101",
+                message=_SL101_MSG,
             )
         )
     return findings
 
 
 def analyze(tree: ast.Module) -> list[GuidanceFinding]:
-    """Return all PG findings for a single module AST, deduped and ordered.
+    """Return all SL findings for a single module AST, deduped and ordered.
 
     Findings are sorted by ``(line, col, code)`` and de-duplicated on the same
     triple, so a ``TypeAdapter`` call nested under several enclosing function
@@ -171,10 +169,10 @@ def analyze(tree: ast.Module) -> list[GuidanceFinding]:
     """
     known = collect_basemodel_names(tree)
     findings: list[GuidanceFinding] = []
-    findings.extend(_check_pg001(tree))
-    findings.extend(_check_pg002(tree, known))
-    findings.extend(_check_pg003(tree))
-    findings.extend(_check_pg101(tree, known))
+    findings.extend(_check_sl001(tree))
+    findings.extend(_check_sl002(tree, known))
+    findings.extend(_check_sl003(tree))
+    findings.extend(_check_sl101(tree, known))
     seen: set[tuple[int, int, str]] = set()
     unique: list[GuidanceFinding] = []
     for f in sorted(findings, key=lambda f: (f.line, f.col, f.code)):

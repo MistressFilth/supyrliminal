@@ -1,28 +1,26 @@
-"""Config-file scanner for PG205.
+"""Config-file scanner for SL205.
 
 Reads ``per-file-ignores`` and ``extend-ignore`` from ``pyproject.toml``
 ``[tool.flake8]``, ``setup.cfg`` ``[flake8]``, ``.flake8`` ``[flake8]``,
 and ``tox.ini`` ``[flake8]``. Also catches inline ``# flake8:`` blocks
-in Python files. Emits one PG205 per disabled PG/PYD code.
+in Python files. Emits one SL205 per disabled SL/PYD code.
 
-The standalone CLI lives in ``pydantic_guidance/_pg205_cli.py`` and
+The standalone CLI lives in ``supyrliminal/_scan_config_cli.py`` and
 re-uses ``scan_config`` after walking a project tree for these files.
 """
-
-from __future__ import annotations
 
 import configparser
 import re
 import tomllib
 from pathlib import Path
 
-from pydantic_guidance._models import GuidanceFinding
+from supyrliminal._models import GuidanceFinding
 
-_PG205_MSG = (
-    "PG205 project settings disable {code} in {file} — "
+_SL205_MSG = (
+    "SL205 project settings disable {code} in {file} — "
     "remove the disable or document it in the registry"
 )
-_PG_PYD_CODE = re.compile(r"\b(?:PG|PYD)\d{2,3}\b")
+_SL_PYD_CODE = re.compile(r"\b(?:SL|PYD)\d{2,3}\b")
 
 _RECOGNIZED_NAMES = frozenset({"pyproject.toml", "setup.cfg", "tox.ini", ".flake8"})
 
@@ -43,7 +41,7 @@ def _normalize_string_or_list(value: object) -> str:
 
 
 def scan_config(path: Path, source: str) -> list[GuidanceFinding]:
-    """Scan a config file for PG/PYD suppressions.
+    """Scan a config file for SL/PYD suppressions.
 
     Dispatch is by recognized filename rather than file suffix: flake8
     uses the same key for ``setup.cfg``, ``tox.ini``, and ``.flake8``,
@@ -91,13 +89,13 @@ def _scan_python_inline(path: Path, source: str) -> list[GuidanceFinding]:
         m = re.search(r"#\s*flake8\s*:\s*(.+)$", line)
         if not m:
             continue
-        for code in _PG_PYD_CODE.findall(m.group(1)):
+        for code in _SL_PYD_CODE.findall(m.group(1)):
             findings.append(
                 GuidanceFinding(
                     line=lineno,
                     col=0,
-                    code="PG205",
-                    message=_PG205_MSG.format(code=code, file=path.name),
+                    code="SL205",
+                    message=_SL205_MSG.format(code=code, file=path.name),
                 )
             )
     return findings
@@ -111,14 +109,14 @@ def _findings_from_flake8_table(
 ) -> list[GuidanceFinding]:
     findings: list[GuidanceFinding] = []
     extend_ignore = _normalize_string_or_list(flake8.get("extend-ignore", ""))
-    for code in _PG_PYD_CODE.findall(extend_ignore):
+    for code in _SL_PYD_CODE.findall(extend_ignore):
         line = _line_of(lines, "extend-ignore") if lines else default_line
         findings.append(
             GuidanceFinding(
                 line=line,
                 col=0,
-                code="PG205",
-                message=_PG205_MSG.format(code=code, file=path.name),
+                code="SL205",
+                message=_SL205_MSG.format(code=code, file=path.name),
             )
         )
     per_file_ignores = _normalize_string_or_list(flake8.get("per-file-ignores", ""))
@@ -126,13 +124,13 @@ def _findings_from_flake8_table(
         globs = match.group(1)
         codes_blob = match.group(2)
         line = _line_of(lines, "per-file-ignores") if lines else default_line
-        for code in _PG_PYD_CODE.findall(codes_blob):
+        for code in _SL_PYD_CODE.findall(codes_blob):
             findings.append(
                 GuidanceFinding(
                     line=line,
                     col=0,
-                    code="PG205",
-                    message=_PG205_MSG.format(
+                    code="SL205",
+                    message=_SL205_MSG.format(
                         code=code, file=f"{path.name} ({globs.strip()})"
                     ),
                 )

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import ast
 
-from pydantic_guidance._fqn import FQNResolver
+from supyrliminal._fqn import FQNResolver
 
 
 def test_line_for_fqn_module_returns_first_line() -> None:

@@ -1,10 +1,10 @@
 repos:
   - repo: local
     hooks:
-      # Pydantic-guidance (PG) and PYD checks together.
-      - id: pydantic-guidance
-        name: pydantic guidance
-        entry: flake8 --select=PG,PYD
+      # Supyrliminal (SL) and PYD checks together.
+      - id: supyrliminal
+        name: Supyrliminal
+        entry: flake8 --select=SL,PYD
         language: python
         types_or: [python, pyi]
         require_serial: true

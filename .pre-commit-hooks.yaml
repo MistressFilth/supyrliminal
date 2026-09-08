@@ -1,7 +1,7 @@
-- id: pydantic-guidance
-  name: pydantic guidance
-  description: "Run flake8 with PG (pydantic-guidance) and PYD checks"
-  entry: flake8 --select=PG,PYD
+- id: supyrliminal
+  name: Supyrliminal
+  description: "Run flake8 with SL (Supyrliminal) and PYD checks"
+  entry: flake8 --select=SL,PYD
   language: python
   types_or: [python, pyi]
   args: []

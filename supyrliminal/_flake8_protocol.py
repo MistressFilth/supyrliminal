@@ -1,6 +1,4 @@
-"""Shared flake8 result-protocol validator for pydantic_guidance plugins."""
-
-from __future__ import annotations
+"""Shared flake8 result-protocol validator for supyrliminal plugins."""
 
 from typing import Any
 

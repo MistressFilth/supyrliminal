@@ -1,6 +1,4 @@
-"""Pydantic-model detection and surface predicates for the PG linter."""
-
-from __future__ import annotations
+"""Pydantic-model detection and surface predicates for the SL linter."""
 
 import ast
 

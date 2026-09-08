@@ -1,25 +1,23 @@
-"""Standalone CLI for PG205 — project-settings suppression scanner.
+"""Standalone scanner for SL205 — project-settings suppression scanner.
 
 flake8 AST plugins cannot see config files (flake8 routes tree plugins
 through ``ast.parse`` first, which raises ``SyntaxError`` on
-``.toml``/``.cfg``/``.ini``). The PG205 scanner ships as a standalone
-entry point instead. Run it from the repo root:
+``.toml``/``.cfg``/``.ini``). The SL205 scanner ships as a standalone
+subcommand instead. Run it from the repo root:
 
-    pg-scan-config            # walk the current tree
-    pg-scan-config /path/to/project
+    supyrliminal scan-config            # walk the current tree
+    supyrliminal scan-config /path/to/project
 
 Output is flake8-compatible (``path:line:col: CODE message``) so it can
 be piped into any flake8-aware toolchain.
 """
 
-from __future__ import annotations
-
 import argparse
 import sys
 from pathlib import Path
 
-from pydantic_guidance._config_scanner import _RECOGNIZED_NAMES, scan_config
-from pydantic_guidance._models import GuidanceFinding
+from supyrliminal._config_scanner import _RECOGNIZED_NAMES, scan_config
+from supyrliminal._models import GuidanceFinding
 
 
 def _is_target(path: Path) -> bool:
@@ -30,7 +28,7 @@ def _is_target(path: Path) -> bool:
 
 
 def scan_project(root: Path) -> list[GuidanceFinding]:
-    """Walk ``root`` for recognized config files and emit PG205 findings.
+    """Walk ``root`` for recognized config files and emit SL205 findings.
 
     The walker descends into every directory below ``root``; hidden
     directories (``.git``, ``.venv``, etc.) are skipped. Each matched
@@ -63,11 +61,11 @@ def _format_finding(path: Path, finding: GuidanceFinding) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for the ``pg-scan-config`` script."""
+    """Entry point for the ``supyrliminal scan-config`` subcommand."""
     parser = argparse.ArgumentParser(
-        prog="pg-scan-config",
+        prog="supyrliminal scan-config",
         description=(
-            "Scan a project for PG/PYD suppressions in config files "
+            "Scan a project for SL/PYD suppressions in config files "
             "(pyproject.toml, setup.cfg, .flake8, tox.ini, *.ini, and "
             "inline `# flake8:` blocks in Python files)."
         ),

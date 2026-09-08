@@ -1,11 +1,9 @@
 """Tests for FQN derivation from AST and module paths."""
 
-from __future__ import annotations
-
 import ast
 from pathlib import Path
 
-from pydantic_guidance._fqn import FQNResolver, module_path
+from supyrliminal._fqn import FQNResolver, module_path
 
 
 def _parse(src: str) -> ast.Module:
