@@ -24,6 +24,8 @@ _PG205_MSG = (
 )
 _PG_PYD_CODE = re.compile(r"\b(?:PG|PYD)\d{2,3}\b")
 
+_RECOGNIZED_NAMES = frozenset({"pyproject.toml", "setup.cfg", "tox.ini", ".flake8"})
+
 
 def _normalize_string_or_list(value: object) -> str:
     """Render a TOML value that may be a string or list of strings.
@@ -45,7 +47,7 @@ def scan_config(path: Path, source: str) -> list[GuidanceFinding]:
     suffix = path.suffix.lower()
     if suffix == ".toml":
         return _scan_pyproject(path, source)
-    if suffix in {".cfg", ".ini"} or path.name in {".flake8", "tox.ini"}:
+    if path.name in _RECOGNIZED_NAMES:
         return _scan_ini(path, source)
     if suffix in {".py", ".pyi"}:
         return _scan_python_inline(path, source)
