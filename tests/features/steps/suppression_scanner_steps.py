@@ -51,6 +51,13 @@ def step_python_unauth(ctx: dict, docstring: str) -> None:
     ctx["root"] = "/proj"
 
 
+@given("a Python file with a noqa:")
+def step_python_authorized(ctx: dict, docstring: str) -> None:
+    ctx["source"] = docstring.strip("\n")
+    ctx["filename"] = "/proj/legacy.py"
+    ctx["root"] = "/proj"
+
+
 @given("an empty registry")
 def step_empty_registry(ctx: dict) -> None:
     ctx["registry"] = SuppressionRegistry()

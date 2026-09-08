@@ -28,7 +28,7 @@ Feature: Suppression scanner
     Then PG203 fires on line 2
 
   Scenario: Authorized noqa does not fire PG203
-    Given a Python file with an unauthorized noqa:
+    Given a Python file with a noqa:
       """
       def parse():
           return 1  # noqa: PG001
