@@ -1,13 +1,13 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[co]
 *.egg-info/
 *.egg
 /dist/
 /build/
 
 # Virtual environments
+venv/
 .venv/
 
 # Ruff
@@ -15,6 +15,9 @@ __pycache__/
 
 # Mypy
 .mypy_cache/
+
+# Ty
+.ty_cache/
 
 # Pytest
 .pytest_cache/
@@ -40,4 +43,15 @@ uv.lock
 
 # Agent local memory
 AGENTS.local.md
+
+# Claude Code
 .claude/settings.local.json
+
+# Superpowers
+superpowers/
+sdd/
+seal/
+.superpowers/
+.sdd/
+.seal/
+
