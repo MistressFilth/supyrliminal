@@ -37,3 +37,7 @@ uv.lock
 
 # Databases (local index files)
 *.db
+
+# Agent local memory
+AGENTS.local.md
+.claude/settings.local.json
