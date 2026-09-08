@@ -131,20 +131,31 @@ def scan_stale_registry(
     file_path: str,
     project_root: str,
     analyzer_findings: list[GuidanceFinding],
+    tree: ast.Module | None = None,
 ) -> list[GuidanceFinding]:
     """Emit PG204 for registry entries the analyzer no longer justifies.
 
-    For each entry ``(fqn, code)`` we need to know whether any construct
-    matching ``fqn`` in ``file_path`` triggers ``code``. A full
-    per-construct analysis is the analyzer's job; here we look up the
-    FQN against the set of constructs the analyzer reported.
+    For each entry ``(fqn, code)`` we need to know whether the construct
+    matching ``fqn`` in ``file_path`` triggers ``code``. When ``tree`` is
+    provided we resolve each analyzer finding to its enclosing FQN and
+    compare ``(entry.fqn, entry.code)`` against that set — collapsing to a
+    bare code set would let a stale entry pass because a *different*
+    construct in the same file fired the same code. Without ``tree`` we
+    fall back to a module-level match, attributing every finding to the
+    file's module path.
     """
     from pathlib import Path
 
     mod = module_path(Path(file_path), Path(project_root))
     if mod is None:
         return []
-    triggered = {f.code for f in analyzer_findings}
+    if tree is not None:
+        resolver = FQNResolver(tree, mod)
+        triggered: set[tuple[str, str]] = {
+            (resolver.for_line(f.line), f.code) for f in analyzer_findings
+        }
+    else:
+        triggered = {(mod, f.code) for f in analyzer_findings}
     is_init = file_path.endswith(("__init__.py", "__init__.pyi"))
     findings: list[GuidanceFinding] = []
     for entry in registry.entries:
@@ -154,7 +165,7 @@ def scan_stale_registry(
         else:
             if not entry.fqn.startswith(mod + ".") and entry.fqn != mod:
                 continue
-        if entry.code in triggered:
+        if (entry.fqn, entry.code) in triggered:
             continue
         findings.append(
             GuidanceFinding(

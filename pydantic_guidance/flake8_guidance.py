@@ -116,5 +116,6 @@ class PGPlugin:
             file_path=self._filename,
             project_root=self._project_root,
             analyzer_findings=analyzer_findings,
+            tree=self._tree,  # type: ignore[arg-type]
         )
         yield from analyzer_findings
