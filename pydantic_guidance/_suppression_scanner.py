@@ -146,6 +146,11 @@ def scan_stale_registry(
     construct in the same file fired the same code. Without ``tree`` we
     fall back to a module-level match, attributing every finding to the
     file's module path.
+
+    A package's ``__init__.py`` is special-cased: its module path
+    collapses to the bare package, so the prefix-match used for other
+    files would falsely match every entry in any submodule. For
+    ``__init__.py`` we require ``entry.fqn == mod`` exactly.
     """
     from pathlib import Path
 
