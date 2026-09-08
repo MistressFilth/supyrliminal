@@ -7,38 +7,53 @@ import ast
 import os
 from collections.abc import Iterator
 from importlib.metadata import version
+from pathlib import Path
 from typing import Any, Self
 
 from pydantic_guidance._flake8_protocol import RESULT_ADAPTER
 from pydantic_guidance._guidance_rules import analyze
+from pydantic_guidance._models import GuidanceFinding, SuppressionRegistry
+from pydantic_guidance._suppression_registry import load as load_registry
+from pydantic_guidance._suppression_scanner import (
+    scan_comments,
+    scan_stale_registry,
+)
 
 
 class PGPlugin:
     """Flake8 AST checker for pydantic-guidance.
 
     Emits PG001-003 (hard, default-on) and PG101 (soft, opt-in via
-    ``--extend-select=PG101``). Hard versus soft is purely the code number;
-    flake8 ``--select`` / ``--extend-select`` controls activation and
-    ``# noqa: PGxxx`` works per-line. The whole plugin is gated by
-    ``[hooks].structured_data_enforcement`` read from
-    ``.true-spec/project/true-spec.toml``.
+    ``--extend-select=PG101``). Also emits PG201-PG204 (hard, default-on)
+    auditing every PG/PYD suppression in Python source, gated by a
+    registry in ``pyproject.toml``. PG205 audits project settings and
+    ships as a standalone ``pg-scan-config`` CLI because flake8's AST
+    plugin protocol cannot reach ``.toml``/``.cfg``/``.ini`` files.
+    The whole plugin is gated by ``[hooks].structured_data_enforcement``
+    in ``.true-spec/project/true-spec.toml``.
+
+    flake8 supplies ``filename`` to ``__init__`` from
+    ``FileProcessor.filename`` per the documented plugin protocol
+    (``docs/source/plugin-development/plugin-parameters.rst``).
     """
 
     name = "flake8-pydantic-guidance"
     version = version("pydantic-guidance")
 
     _enabled: bool = True
+    _project_root: str = os.getcwd()
+    _registry: SuppressionRegistry = SuppressionRegistry()
 
-    def __init__(self, tree: ast.AST) -> None:
+    def __init__(self, tree: ast.AST, filename: str) -> None:
         self._tree = tree
+        self._filename = filename
+
+    @staticmethod
+    def _load_registry(root: Path) -> SuppressionRegistry:
+        return load_registry(root)
 
     @classmethod
     def add_options(cls, option_manager: Any) -> None:
-        """Register the shared config-root option with flake8.
-
-        Args:
-            option_manager: Flake8 option manager instance.
-        """
         try:
             option_manager.add_option(
                 "--pg-config-root",
@@ -54,29 +69,51 @@ class PGPlugin:
 
     @classmethod
     def parse_options(cls, options: Any) -> None:
-        """Gate the plugin on [hooks].structured_data_enforcement.
-
-        Args:
-            options: Parsed flake8 options namespace.
-        """
         from pydantic_guidance._config import read_hooks_config
 
         root = options.pg_config_root or os.getcwd()
-        hooks = read_hooks_config(root)
-        cls._enabled = hooks.structured_data_enforcement
+        cls._enabled = read_hooks_config(root).structured_data_enforcement
+        cls._project_root = root
+        cls._registry = cls._load_registry(Path(root))
 
     def run(self) -> Iterator[tuple[int, int, str, type[Self]]]:
-        """Yield flake8 error tuples for each PG finding.
+        if not self._enabled:
+            return
 
-        Yields:
-            Tuples of (line, col_offset, message, checker_type), each
-            validated through ``RESULT_ADAPTER``. Yields nothing when the
-            plugin is disabled (the ``_enabled`` gate guards the loop body,
-            mirroring ``flake8_bid.BidContainmentPlugin.run``).
-        """
-        for finding in analyze(self._tree):  # type: ignore[arg-type]
-            if not self._enabled:
-                continue
-            yield RESULT_ADAPTER.validate_python(
-                (finding.line, finding.col, finding.message, type(self))
-            )
+        findings: list[GuidanceFinding] = []
+        if isinstance(self._tree, ast.Module):
+            findings.extend(self._run_python())
+
+        for f in findings:
+            yield RESULT_ADAPTER.validate_python((f.line, f.col, f.message, type(self)))
+
+    def _run_python(self) -> Iterator[GuidanceFinding]:
+        analyzer_findings = list(analyze(self._tree))  # type: ignore[arg-type]
+        source = ""
+        try:
+            with open(self._filename, encoding="utf-8") as f:
+                source = f.read()
+        except UnicodeDecodeError:
+            try:
+                with open(self._filename, encoding="latin-1") as f:
+                    source = f.read()
+            except OSError:
+                source = ""
+        except OSError:
+            source = ""
+        yield from scan_comments(
+            self._tree,  # type: ignore[arg-type]
+            source,
+            file_path=self._filename,
+            project_root=self._project_root,
+            registry=self._registry,
+            analyzer_findings=analyzer_findings,
+        )
+        yield from scan_stale_registry(
+            self._registry,
+            file_path=self._filename,
+            project_root=self._project_root,
+            analyzer_findings=analyzer_findings,
+            tree=self._tree,  # type: ignore[arg-type]
+        )
+        yield from analyzer_findings
