@@ -64,3 +64,32 @@ def test_malformed_config_returns_empty(tmp_path: Path) -> None:
     p.write_text("this is [not valid", encoding="utf-8")
     findings = scan_config(p, "this is [not valid")
     assert findings == []
+
+
+def test_pyproject_per_file_ignores_list_form(tmp_path: Path) -> None:
+    """TOML list form of per-file-ignores must attribute each code to its glob."""
+    src = (
+        '[tool.flake8]\n'
+        'per-file-ignores = [\n'
+        '  "tests/*: PG001, PG002",\n'
+        '  "legacy/*: PG003",\n'
+        ']\n'
+    )
+    p = tmp_path / "pyproject.toml"
+    p.write_text(src, encoding="utf-8")
+    findings = scan_config(p, src)
+    pg003 = [f for f in findings if "PG003" in f.message]
+    assert pg003, "PG003 from legacy/* must be detected"
+    assert any("legacy/*" in f.message for f in pg003)
+
+
+def test_pyproject_extend_ignore_list_form(tmp_path: Path) -> None:
+    """TOML list form of extend-ignore must collect codes from every element."""
+    src = '[tool.flake8]\nextend-ignore = ["PG001", "PYD001", "E501"]\n'
+    p = tmp_path / "pyproject.toml"
+    p.write_text(src, encoding="utf-8")
+    findings = scan_config(p, src)
+    codes = [f.message for f in findings]
+    assert any("PG001" in m for m in codes)
+    assert any("PYD001" in m for m in codes)
+    assert not any("E501" in m for m in codes)

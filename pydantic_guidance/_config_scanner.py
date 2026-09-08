@@ -25,6 +25,21 @@ _PG205_MSG = (
 _PG_PYD_CODE = re.compile(r"\b(?:PG|PYD)\d{2,3}\b")
 
 
+def _normalize_string_or_list(value: object) -> str:
+    """Render a TOML value that may be a string or list of strings.
+
+    flake8's TOML ``per-file-ignores`` (and ``extend-ignore``) accept
+    either a single string or an array of strings; the array form is
+    what most projects use for ``pyproject.toml``. Mirrors flake8's own
+    list-vs-str normalization in ``flake8/utils.py:89-92``.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(str(v) for v in value)
+    return ""
+
+
 def scan_config(path: Path, source: str) -> list[GuidanceFinding]:
     """Scan a config file for PG/PYD suppressions."""
     suffix = path.suffix.lower()
@@ -86,7 +101,7 @@ def _findings_from_flake8_table(
     lines: list[str] | None = None,
 ) -> list[GuidanceFinding]:
     findings: list[GuidanceFinding] = []
-    extend_ignore = str(flake8.get("extend-ignore", ""))
+    extend_ignore = _normalize_string_or_list(flake8.get("extend-ignore", ""))
     for code in _PG_PYD_CODE.findall(extend_ignore):
         line = _line_of(lines, "extend-ignore") if lines else default_line
         findings.append(
@@ -97,7 +112,7 @@ def _findings_from_flake8_table(
                 message=_PG205_MSG.format(code=code, file=path.name),
             )
         )
-    per_file_ignores = str(flake8.get("per-file-ignores", ""))
+    per_file_ignores = _normalize_string_or_list(flake8.get("per-file-ignores", ""))
     for match in re.finditer(r"([^\n:]+):\s*([^\n]+)", per_file_ignores):
         globs = match.group(1)
         codes_blob = match.group(2)
