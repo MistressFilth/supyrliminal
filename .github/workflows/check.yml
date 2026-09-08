@@ -12,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
       - name: Install deps
         run: uv sync
       - name: Lint
@@ -19,6 +21,6 @@ jobs:
       - name: Typecheck
         run: make typecheck
       - name: Format check
-        run: uvx ruff format --check .
+        run: uv run ruff format --check .
       - name: Unit tests
         run: make unit-test
