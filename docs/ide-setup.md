@@ -3,7 +3,7 @@
 `pydantic-guidance` provides one first-party flake8 checker plugin:
 
 - **PG** (`PGPlugin`) — pydantic-guidance hints (codes PG001–PG003
-  default-on, PG101 opt-in)
+  default-on, PG101 opt-in, PG201–PG205 default-on suppression scanner)
 
 The plugin surfaces inline diagnostics in VS Code, PyCharm, and Neovim via the
 standard flake8 protocol. No additional plugin code is required beyond
@@ -85,6 +85,11 @@ extend-select = PG101
 | PG002  | default-on  | `TypeAdapter` used as a field annotation; use `RootModel` instead         |
 | PG003  | default-on  | Deprecated `@root_validator`; use `@model_validator(mode=...)`            |
 | PG101  | opt-in      | `BaseModel` subclass uses no Pydantic surface; a stdlib `@dataclass` is lighter |
+| PG201  | default-on  | Blanket `# noqa` with no codes listed — list specific codes or remove the line |
+| PG202  | default-on  | Broad `# noqa` listing 3+ PG/PYD codes — narrow to specific constructs via the registry |
+| PG203  | default-on  | `# noqa: PGxxx` / `# noqa: PYDxxx` whose construct has no matching entry in `[tool.pydantic_guidance.suppressions]` |
+| PG204  | default-on  | Registry entry whose target construct no longer triggers the listed code (stale) |
+| PG205  | default-on  | Project settings (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) disable a PG/PYD code |
 
 For the upstream `PYDxxx` rule catalog, see
 [flake8-pydantic on PyPI](https://pypi.org/project/flake8-pydantic/).
@@ -111,3 +116,22 @@ For the upstream `PYDxxx` rule catalog, see
    flake8 as a Python linter.
 2. Add `pg-config-root` to `.flake8`.
 3. PG codes appear in ALE's diagnostics list on file save.
+
+## Refreshing the IDE plugin list
+
+When you upgrade `pydantic-guidance` to a version that adds new codes (e.g.,
+the `PG2xx` suppression scanner series), your IDE must refresh its flake8
+plugin list before the new codes appear inline. The flake8 binary itself
+picks up new codes automatically on next invocation, but IDE linter caches do
+not.
+
+- **VS Code (ms-python.flake8):** run the `Flake8: Reset Counts` command, or
+  reload the window (`Developer: Reload Window`) to force the language server
+  to re-enumerate flake8 codes.
+- **PyCharm:** invalidate caches via `File > Invalidate Caches...`, then
+  re-trigger the flake8 inspection.
+- **Neovim (ALE):** restart ALE (`:ALEStop` then `:ALERestart`) or the entire
+  editor to drop the cached code list.
+
+Until the IDE reloads, existing `PG2xx` findings will still surface from the
+CLI but may not appear as inline diagnostics.
