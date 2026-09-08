@@ -19,8 +19,6 @@ from pydantic_guidance._suppression_scanner import (
     scan_stale_registry,
 )
 
-_PY_SUFFIXES = (".py", ".pyi")
-
 
 class PGPlugin:
     """Flake8 AST checker for pydantic-guidance.
