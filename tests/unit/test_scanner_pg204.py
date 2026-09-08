@@ -66,9 +66,7 @@ def test_active_entry_emits_no_pg204(root: Path) -> None:
         reg,
         file_path=file_path,
         project_root=str(root),
-        analyzer_findings=[
-            GuidanceFinding(line=1, code="PG001", message="x")
-        ],
+        analyzer_findings=[GuidanceFinding(line=1, code="PG001", message="x")],
         tree=tree,
     )
     assert all(f.code != "PG204" for f in findings)
@@ -157,11 +155,7 @@ def test_pg204_fires_per_construct_not_per_code(root: Path) -> None:
         reg,
         file_path=file_path,
         project_root=str(root),
-        analyzer_findings=[
-            GuidanceFinding(line=1, code="PG001", message="x")
-        ],
+        analyzer_findings=[GuidanceFinding(line=1, code="PG001", message="x")],
         tree=tree,
     )
-    assert any(
-        f.code == "PG204" and "proj.x.other" in f.message for f in findings
-    )
+    assert any(f.code == "PG204" and "proj.x.other" in f.message for f in findings)

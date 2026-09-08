@@ -69,11 +69,11 @@ def test_malformed_config_returns_empty(tmp_path: Path) -> None:
 def test_pyproject_per_file_ignores_list_form(tmp_path: Path) -> None:
     """TOML list form of per-file-ignores must attribute each code to its glob."""
     src = (
-        '[tool.flake8]\n'
-        'per-file-ignores = [\n'
+        "[tool.flake8]\n"
+        "per-file-ignores = [\n"
         '  "tests/*: PG001, PG002",\n'
         '  "legacy/*: PG003",\n'
-        ']\n'
+        "]\n"
     )
     p = tmp_path / "pyproject.toml"
     p.write_text(src, encoding="utf-8")

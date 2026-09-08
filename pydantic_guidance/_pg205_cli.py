@@ -42,7 +42,10 @@ def scan_project(root: Path) -> list[GuidanceFinding]:
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        if any(part.startswith(".") and part not in _RECOGNIZED_NAMES for part in path.parts):
+        if any(
+            part.startswith(".") and part not in _RECOGNIZED_NAMES
+            for part in path.parts
+        ):
             continue
         if not _is_target(path):
             continue

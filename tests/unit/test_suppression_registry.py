@@ -58,9 +58,7 @@ def test_load_malformed_returns_empty(tmp_path: Path) -> None:
     assert reg.entries == ()
 
 
-def test_load_keeps_valid_when_one_duplicate_exists(
-    tmp_path: Path, capsys
-) -> None:
+def test_load_keeps_valid_when_one_duplicate_exists(tmp_path: Path, capsys) -> None:
     """A single duplicate pair must NOT wipe the rest of the registry.
 
     Pre-fix behavior: the outer ``except ValidationError`` returned an
