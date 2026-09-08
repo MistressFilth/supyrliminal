@@ -95,6 +95,12 @@ class PGPlugin:
         try:
             with open(self._filename, encoding="utf-8") as f:
                 source = f.read()
+        except UnicodeDecodeError:
+            try:
+                with open(self._filename, encoding="latin-1") as f:
+                    source = f.read()
+            except OSError:
+                source = ""
         except OSError:
             source = ""
         yield from scan_comments(
