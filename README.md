@@ -174,20 +174,43 @@ the code number; flake8 `--select` / `--extend-select` controls activation and
 | PG003 | default-on | Deprecated `@root_validator` — use `@model_validator(mode='before'\|'after')` | [PG003.md](pydantic_guidance/_rules/PG003.md) |
 | PG101 | opt-in | `BaseModel` subclass uses no Pydantic surface — a stdlib `@dataclass` is lighter for internal state | [PG101.md](pydantic_guidance/_rules/PG101.md) |
 
-### Suppression
+### Suppression Scanner (PG201-PG205)
 
-Standard flake8 suppression works automatically:
+The suppression scanner audits every PG/PYD suppression, in code and in
+project settings, and gates each one on a registry entry in
+`pyproject.toml`.
 
-```python
-adapter = TypeAdapter(list[int])  # noqa: PG001  (per-call adapter is intentional)
+| Code | Trigger | Severity |
+|------|---------|----------|
+| PG201 | `# noqa` with no codes listed | hard, default-on |
+| PG202 | `# noqa` listing 3+ PG/PYD codes | hard, default-on |
+| PG203 | `# noqa: PGxxx` / `# noqa: PYDxxx` without a matching registry entry | hard, default-on |
+| PG204 | Registry entry whose target construct no longer triggers the listed code | hard, default-on |
+| PG205 | Project settings disable a PG/PYD code (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) | hard, default-on |
+
+#### Registry
+
+Every authorized `# noqa: PGxxx` / `# noqa: PYDxxx` must have a
+matching entry under `[tool.pydantic_guidance.suppressions]` in
+`pyproject.toml`:
+
+```toml
+[[tool.pydantic_guidance.suppressions]]
+fqn = "myapp.legacy.parse"
+code = "PG001"
+reason = "per-call adapter needed for runtime type dispatch"
+approved_by = "alice"
+approved_sha = "f3c8d1e"
 ```
 
-```ini
-# setup.cfg or .flake8
-[flake8]
-per-file-ignores =
-    tests/*: PG001,PG002,PYD001
-```
+`fqn` is the AST-stable identifier of the construct being suppressed
+(`module`, `module.func`, `module.Class.method`,
+`module.Class.Nested`). The HITL gate is `CODEOWNERS` on
+`pyproject.toml`: agents cannot edit the registry without human
+review.
+
+PG201 and PG202 cannot be authorized by the registry — narrow the
+`# noqa` instead.
 
 ### Configuration
 
