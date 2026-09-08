@@ -1,2 +1,1 @@
-@AGENTS.md
-@AGENTS.local.md
+AGENTS.md
