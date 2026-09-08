@@ -2,6 +2,10 @@
 
 Repository memory for LLM agents working on this codebase.
 
+## Local-only memory file
+
+@AGENTS.local.md
+
 ## What this repo is
 
 `pydantic-guidance` is a flake8 extension that steers Pydantic code toward
