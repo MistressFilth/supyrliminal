@@ -71,13 +71,16 @@ def scan_comments(
     registry: SuppressionRegistry | None = None,
     analyzer_findings: list[GuidanceFinding] | None = None,
 ) -> list[GuidanceFinding]:
-    """Scan a single Python file for PG201-PG204.
+    """Scan a single Python file for PG201-PG203.
 
-    ``registry`` is required for PG203/PG204. ``analyzer_findings`` is
-    the output of the existing PG analyzer; PG204 compares registry
-    entries against it. ``file_path`` and ``project_root`` are used to
-    derive the module path for FQN lookup. Files outside the project
-    root still get PG201/PG202 but skip PG203/PG204.
+    ``registry`` is required for PG203: every PG/PYD code in a
+    ``# noqa:`` clause must have a matching entry under
+    ``[tool.pydantic_guidance.suppressions]`` in ``pyproject.toml``.
+    ``file_path`` and ``project_root`` are used to derive the module
+    path for FQN lookup. Files outside the project root still get
+    PG201/PG202 but skip PG203. ``analyzer_findings`` is unused here;
+    PG204 is emitted by :func:`scan_stale_registry`, which compares
+    registry entries against analyzer output.
     """
     findings: list[GuidanceFinding] = []
     for lineno, clause in _iter_noqa_comments(source):
