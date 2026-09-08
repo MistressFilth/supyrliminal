@@ -20,13 +20,13 @@ clean: ## Remove build and cache artifacts
 	find . -name '*.pyc' -delete 2>/dev/null || true
 
 lint: sync ## Run linters
-	uvx ruff check .
+	uv run ruff check .
 
 typecheck: sync ## Type-check the package source
 	.venv/bin/python -m mypy supyrliminal
 
 format: sync ## Auto-format source files
-	uvx ruff format .
+	uv run ruff format .
 
 check: lint typecheck format ## Run lint, typecheck, and format
 
