@@ -87,6 +87,26 @@ class FQNResolver:
         chain.reverse()
         return f"{self._module}." + ".".join(chain)
 
+    def line_for_fqn(self, fqn: str) -> tuple[int, int] | None:
+        """Return the (line, col) where the construct identified by ``fqn`` starts.
+
+        Returns ``None`` if ``fqn`` is not in the tree. The module path
+        itself (``fqn == self._module``) maps to the file's first line,
+        since there is no scope-bearing node for it. Used by PG204 to
+        report a location for stale registry entries.
+        """
+        if fqn == self._module:
+            return (1, 0)
+        for node in ast.walk(self._tree):
+            if not isinstance(
+                node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+            ):
+                continue
+            if _node_fqn(node, self._parents, self._module) == fqn:
+                col = getattr(node, "col_offset", 0) or 0
+                return (node.lineno, col)
+        return None
+
 
 def _covers(node: ast.AST, line: int) -> bool:
     """True iff ``line`` falls inside ``node``'s source range."""
@@ -97,3 +117,21 @@ def _covers(node: ast.AST, line: int) -> bool:
     if end is None:
         return line == start
     return start <= line <= end
+
+
+def _node_fqn(
+    node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    parents: dict[int, ast.AST],
+    module: str,
+) -> str:
+    """Compute the FQN of a scope-bearing node by walking its parents."""
+    chain: list[str] = []
+    cur: ast.AST | None = node
+    while cur is not None:
+        if isinstance(cur, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            chain.append(cur.name)
+        cur = parents.get(id(cur))
+    if not chain:
+        return module
+    chain.reverse()
+    return f"{module}." + ".".join(chain)

@@ -46,3 +46,8 @@ Feature: Suppression scanner
     When the file is scanned
     Then PG205 fires for PG001
     And PG205 does not fire for E501
+
+  Scenario: pg-scan-config CLI finds PG205 in a real project tree
+    Given a project tree with pyproject.toml disabling PG001
+    When pg-scan-config runs against the tree
+    Then the CLI output mentions PG001

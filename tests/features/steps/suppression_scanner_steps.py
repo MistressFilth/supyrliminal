@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -143,3 +144,29 @@ def step_pg205_for(ctx: dict, code: str) -> None:
 @then(parsers.parse("PG205 does not fire for {code}"))
 def step_pg205_absent_for(ctx: dict, code: str) -> None:
     assert all(not (f.code == "PG205" and code in f.message) for f in ctx["findings"])
+
+
+@given("a project tree with pyproject.toml disabling PG001")
+def step_project_with_disable(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.flake8]\nextend-ignore = "PG001, E501"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
+
+
+@when("pg-scan-config runs against the tree")
+def step_pg_scan_config_runs(tmp_path: Path, ctx: dict) -> None:
+    result = subprocess.run(
+        ["pg-scan-config", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    ctx["cli_stdout"] = result.stdout
+    ctx["cli_returncode"] = result.returncode
+
+
+@then(parsers.parse("the CLI output mentions {code}"))
+def step_cli_mentions(ctx: dict, code: str) -> None:
+    assert code in ctx["cli_stdout"]

@@ -159,3 +159,41 @@ def test_pg204_fires_per_construct_not_per_code(root: Path) -> None:
         tree=tree,
     )
     assert any(f.code == "PG204" and "proj.x.other" in f.message for f in findings)
+
+
+def test_pg204_reports_construct_line_not_file_top(root: Path) -> None:
+    """PG204 finding line/col point at the stale construct, not file top.
+
+    Pre-fix behavior always reported ``line=1, col=0`` regardless of
+    where the construct lives in the file. The fix uses ``FQNResolver``
+    to map the entry's FQN back to its AST node.
+    """
+    file_path = str(root / "proj" / "x.py")
+    src = (
+        "# leading comment\n"  # line 1
+        "\n"  # line 2
+        "def one(): pass\n"  # line 3
+        "def two(): pass\n"  # line 4
+    )
+    tree = _tree(src)
+    reg = SuppressionRegistry(
+        entries=(
+            SuppressionEntry(
+                fqn="proj.x.two",
+                code="PG001",
+                reason="r",
+                approved_by="a",
+                approved_sha="s",
+            ),
+        )
+    )
+    findings = scan_stale_registry(
+        reg,
+        file_path=file_path,
+        project_root=str(root),
+        analyzer_findings=[],
+        tree=tree,
+    )
+    pg204 = [f for f in findings if f.code == "PG204"]
+    assert len(pg204) == 1
+    assert (pg204[0].line, pg204[0].col) == (4, 0)

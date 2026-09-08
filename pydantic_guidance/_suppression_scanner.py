@@ -166,6 +166,7 @@ def scan_stale_registry(
         triggered = {(mod, f.code) for f in analyzer_findings}
     is_init = file_path.endswith(("__init__.py", "__init__.pyi"))
     findings: list[GuidanceFinding] = []
+    location_lookup = resolver if tree is not None else None
     for entry in registry.entries:
         if is_init:
             if entry.fqn != mod:
@@ -175,10 +176,15 @@ def scan_stale_registry(
                 continue
         if (entry.fqn, entry.code) in triggered:
             continue
+        line, col = (1, 0)
+        if location_lookup is not None:
+            found = location_lookup.line_for_fqn(entry.fqn)
+            if found is not None:
+                line, col = found
         findings.append(
             GuidanceFinding(
-                line=1,
-                col=0,
+                line=line,
+                col=col,
                 code="PG204",
                 message=_PG204_MSG.format(fqn=entry.fqn, code=entry.code),
             )
