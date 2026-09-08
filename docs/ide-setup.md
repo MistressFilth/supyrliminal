@@ -89,7 +89,7 @@ extend-select = PG101
 | PG202  | default-on  | Broad `# noqa` listing 3+ PG/PYD codes — narrow to specific constructs via the registry |
 | PG203  | default-on  | `# noqa: PGxxx` / `# noqa: PYDxxx` whose construct has no matching entry in `[tool.pydantic_guidance.suppressions]` |
 | PG204  | default-on  | Registry entry whose target construct no longer triggers the listed code (stale) |
-| PG205  | default-on  | Project settings (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) disable a PG/PYD code |
+| PG205  | default-on  | Project settings (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) disable a PG/PYD code — emitted by the `pg-scan-config` standalone CLI, not the flake8 plugin |
 
 For the upstream `PYDxxx` rule catalog, see
 [flake8-pydantic on PyPI](https://pypi.org/project/flake8-pydantic/).

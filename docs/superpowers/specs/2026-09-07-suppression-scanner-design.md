@@ -33,7 +33,7 @@ All `PG2xx` codes ship default-on and hard, parallel to `PG001`–`PG003`.
 | `PG202` | `# noqa: A,B,C...` listing 3+ PG/PYD codes on one line | `PG202 broad # noqa suppresses N PG/PYD codes — narrow to specific constructs via the registry` |
 | `PG203` | `# noqa: PGxxx` / `# noqa: PYDxxx` whose enclosing construct has no matching entry in `[tool.pydantic_guidance.suppressions]` | `PG203 unauthorized # noqa for CODE on CONSTRUCT — add a registry entry under [tool.pydantic_guidance.suppressions] or remove the comment` |
 | `PG204` | A registry entry whose target construct does not trigger the listed code | `PG204 registry entry for FQN/CODE is stale — analyzer no longer fires on this construct; remove the entry or re-justify` |
-| `PG205` | A project-settings file disables a PG/PYD code (`per-file-ignores`, `extend-ignore`, inline `# flake8:` block) | `PG205 project settings disable CODE in FILE — remove the disable or document it in the registry` |
+| `PG205` | A project-settings file disables a PG/PYD code (`per-file-ignores`, `extend-ignore`, inline `# flake8:` block) | `PG205 project settings disable CODE in FILE — remove the disable or document it in the registry`. **Emitted by the `pg-scan-config` standalone CLI; flake8's AST plugin protocol cannot reach `.toml`/`.cfg`/`.ini` files.** |
 
 `PG201` and `PG202` cannot be authorized by the registry: they describe patterns, not constructs. They always fail.
 
@@ -84,23 +84,26 @@ The smallest enclosing scope wins, so a `# noqa` on a method body targets `modul
 
 ## Architecture
 
-Single flake8 plugin (`PGPlugin` in `pydantic_guidance/flake8_guidance.py`) extended to dispatch on file type. The plugin already runs once per file; no new entry point.
+PG201-PG204 ship as a flake8 plugin (`PGPlugin` in `pydantic_guidance/flake8_guidance.py`) extended to scan Python source. PG205 ships as a standalone CLI (`pg-scan-config` in `pydantic_guidance/_pg205_cli.py`) because flake8's AST plugin protocol calls `ast.parse()` first, which raises `SyntaxError` on `.toml`/`.cfg`/`.ini` files — the plugin never instantiates for config files.
 
 ```
 flake8 dispatch
-   ├── filename ends in .py / .pyi     → AST scan + registry lookup  → PG201–PG204
-   ├── filename ends in .cfg / .toml    → config parser               → PG205
-   └── filename is anything else        → no PG findings
+   └── filename ends in .py / .pyi     → AST scan + registry lookup  → PG001–PG003, PG101, PG201–PG204
+
+pg-scan-config (standalone CLI)
+   ├── project root walk               → recognize config files
+   └── scan_config(path, source)       → PG205
 ```
 
 ### Module layout
 
 ```
 pydantic_guidance/
-  flake8_guidance.py        # PGPlugin (extended)
+  flake8_guidance.py        # PGPlugin (Python source only; emits PG001-PG003, PG101, PG201-PG204)
+  _pg205_cli.py             # NEW: pg-scan-config entry point, walks repo for config files
   _suppression_registry.py  # NEW: load + validate registry from pyproject.toml
   _suppression_scanner.py   # NEW: per-file AST scanner, emits PG201-PG204
-  _config_scanner.py        # NEW: config-file scanner, emits PG205
+  _config_scanner.py        # NEW: config-file scanner, emits PG205 (called from _pg205_cli)
   _fqn.py                   # NEW: AST → FQN resolution
   _models.py                # ADDED: SuppressionEntry model
 ```
@@ -131,8 +134,9 @@ For each file flake8 visits:
 - **Missing `pyproject.toml`:** registry is empty. Every `# noqa: PGxxx` triggers `PG203`. This is the safe default: nothing is authorized until documented.
 - **Malformed registry:** each malformed entry emits `PG206` against `pyproject.toml`. The scanner continues with the well-formed entries.
 - **Unparseable Python file:** flake8 handles parse errors upstream; the PG plugin runs only on parseable trees.
-- **Unparseable config file:** the config scanner catches `tomllib.TOMLDecodeError` / `configparser.Error` and emits one summary finding (no specific code; skipped in this iteration — see Future Work).
+- **Unparseable config file:** `scan_config` catches `tomllib.TOMLDecodeError` / `configparser.Error` and returns an empty list for that file; `pg-scan-config` skips the file and continues the walk.
 - **Filename outside `--pg-config-root`:** cannot derive a module path. The plugin logs once and skips `PG203`/`PG204` for that file (cannot check what it cannot name). `# noqa` on such a file still triggers `PG201`/`PG202`.
+- **`pg-scan-config` runs over hidden directories only as a no-op:** dotfile-prefixed directories (`.git`, `.venv`, …) are skipped to keep the walk fast on real projects; `.flake8` and `tox.ini` themselves are matched by name.
 
 ## Testing
 

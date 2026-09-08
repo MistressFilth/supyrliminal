@@ -10,7 +10,6 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Self
 
-from pydantic_guidance._config_scanner import scan_config
 from pydantic_guidance._flake8_protocol import RESULT_ADAPTER
 from pydantic_guidance._guidance_rules import analyze
 from pydantic_guidance._models import GuidanceFinding, SuppressionRegistry
@@ -21,19 +20,19 @@ from pydantic_guidance._suppression_scanner import (
 )
 
 _PY_SUFFIXES = (".py", ".pyi")
-_CONFIG_SUFFIXES = (".toml", ".cfg", ".ini")
-_CONFIG_NAMES = (".flake8", "tox.ini")
 
 
 class PGPlugin:
-    """Flake8 AST + config checker for pydantic-guidance.
+    """Flake8 AST checker for pydantic-guidance.
 
     Emits PG001-003 (hard, default-on) and PG101 (soft, opt-in via
-    ``--extend-select=PG101``). Also emits PG201-205 (hard, default-on)
-    auditing every PG/PYD suppression in code and project settings,
-    gated by a registry in ``pyproject.toml``. The whole plugin is
-    gated by ``[hooks].structured_data_enforcement`` in
-    ``.true-spec/project/true-spec.toml``.
+    ``--extend-select=PG101``). Also emits PG201-PG204 (hard, default-on)
+    auditing every PG/PYD suppression in Python source, gated by a
+    registry in ``pyproject.toml``. PG205 audits project settings and
+    ships as a standalone ``pg-scan-config`` CLI because flake8's AST
+    plugin protocol cannot reach ``.toml``/``.cfg``/``.ini`` files.
+    The whole plugin is gated by ``[hooks].structured_data_enforcement``
+    in ``.true-spec/project/true-spec.toml``.
 
     flake8 supplies ``filename`` to ``__init__`` from
     ``FileProcessor.filename`` per the documented plugin protocol
@@ -84,19 +83,11 @@ class PGPlugin:
             return
 
         findings: list[GuidanceFinding] = []
-        if self._is_config():
-            findings.extend(self._run_config())
-        elif isinstance(self._tree, ast.Module):
+        if isinstance(self._tree, ast.Module):
             findings.extend(self._run_python())
 
         for f in findings:
             yield RESULT_ADAPTER.validate_python((f.line, f.col, f.message, type(self)))
-
-    def _is_config(self) -> bool:
-        return self._filename.endswith(_CONFIG_SUFFIXES) or any(
-            self._filename.endswith("/" + n) or self._filename.endswith(n)
-            for n in _CONFIG_NAMES
-        )
 
     def _run_python(self) -> Iterator[GuidanceFinding]:
         analyzer_findings = list(analyze(self._tree))  # type: ignore[arg-type]
@@ -121,11 +112,3 @@ class PGPlugin:
             analyzer_findings=analyzer_findings,
         )
         yield from analyzer_findings
-
-    def _run_config(self) -> Iterator[GuidanceFinding]:
-        path = Path(self._filename)
-        try:
-            source = path.read_text(encoding="utf-8")
-        except OSError:
-            return
-        yield from scan_config(path, source)

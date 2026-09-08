@@ -15,10 +15,15 @@
 - Suppression registry loaded eagerly from `pyproject.toml`; FQN
   derived from AST identifiers (functions, methods, nested classes,
   module scope).
+- `pg-scan-config` standalone CLI for PG205 (flake8's AST plugin
+  protocol cannot reach `.toml`/`.cfg`/`.ini` files).
 
 ### Changed
-- `PGPlugin` dispatches per file kind: AST scanner for `.py` / `.pyi`,
-  config scanner for `.toml` / `.cfg` / `.ini` / `.flake8`.
+- `PGPlugin` emits only the AST-scannable codes (PG001-PG003, PG101,
+  PG201-PG204); PG205 moved to a dedicated CLI entry point.
+- `scan_config` now dispatches by recognized filename rather than
+  suffix; accepts the TOML list form of `per-file-ignores` and
+  `extend-ignore`.
 
 ### Required Human Gate
 - Registry edits require `CODEOWNERS`-gated human review on

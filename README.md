@@ -180,13 +180,25 @@ The suppression scanner audits every PG/PYD suppression, in code and in
 project settings, and gates each one on a registry entry in
 `pyproject.toml`.
 
-| Code | Trigger | Severity |
-|------|---------|----------|
-| PG201 | `# noqa` with no codes listed | hard, default-on |
-| PG202 | `# noqa` listing 3+ PG/PYD codes | hard, default-on |
-| PG203 | `# noqa: PGxxx` / `# noqa: PYDxxx` without a matching registry entry | hard, default-on |
-| PG204 | Registry entry whose target construct no longer triggers the listed code | hard, default-on |
-| PG205 | Project settings disable a PG/PYD code (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) | hard, default-on |
+| Code | Trigger | Emitter | Severity |
+|------|---------|---------|----------|
+| PG201 | `# noqa` with no codes listed | flake8 (`PGPlugin`) | hard, default-on |
+| PG202 | `# noqa` listing 3+ PG/PYD codes | flake8 (`PGPlugin`) | hard, default-on |
+| PG203 | `# noqa: PGxxx` / `# noqa: PYDxxx` without a matching registry entry | flake8 (`PGPlugin`) | hard, default-on |
+| PG204 | Registry entry whose target construct no longer triggers the listed code | flake8 (`PGPlugin`) | hard, default-on |
+| PG205 | Project settings disable a PG/PYD code (`per-file-ignores`, `extend-ignore`, inline `# flake8:`) | `pg-scan-config` CLI | hard, default-on |
+
+PG205 ships as a standalone CLI because flake8's AST plugin protocol
+calls `ast.parse()` first and never instantiates the plugin for
+`.toml`/`.cfg`/`.ini` files. Run `pg-scan-config` from the project
+root (or pass an explicit path) to surface every PG205:
+
+```console
+pg-scan-config                # walk the current tree
+pg-scan-config /path/to/project
+```
+
+Output is flake8-compatible (`path:line:col: PG205 message`).
 
 #### Registry
 
@@ -209,8 +221,8 @@ approved_sha = "f3c8d1e"
 `pyproject.toml`: agents cannot edit the registry without human
 review.
 
-PG201 and PG202 cannot be authorized by the registry — narrow the
-`# noqa` instead.
+PG201, PG202, and PG205 cannot be authorized by the registry — narrow
+the `# noqa` and clean up project settings instead.
 
 ### Configuration
 

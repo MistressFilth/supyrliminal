@@ -4,6 +4,9 @@ Reads ``per-file-ignores`` and ``extend-ignore`` from ``pyproject.toml``
 ``[tool.flake8]``, ``setup.cfg`` ``[flake8]``, ``.flake8`` ``[flake8]``,
 and ``tox.ini`` ``[flake8]``. Also catches inline ``# flake8:`` blocks
 in Python files. Emits one PG205 per disabled PG/PYD code.
+
+The standalone CLI lives in ``pydantic_guidance/_pg205_cli.py`` and
+re-uses ``scan_config`` after walking a project tree for these files.
 """
 
 from __future__ import annotations
