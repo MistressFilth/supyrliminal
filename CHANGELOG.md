@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- GitHub Actions workflow at `.github/workflows/check.yml` runs lint,
+  typecheck, format check, and unit tests on every push and pull
+  request to `main`. The job name is `check`, which the protected
+  branch ruleset requires as the gating status check.
+
 ## [0.1.0] - 2026-09-08
 
 First release under the Supyrliminal name. The distribution, the import

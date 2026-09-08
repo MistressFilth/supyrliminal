@@ -41,7 +41,7 @@ This adds the dependency to `[dependency-groups] dev` instead of
 ```toml
 [project]
 dependencies = [
-    "supyrliminal>=0.2.0",
+    "supyrliminal>=0.1.0",
 ]
 ```
 
@@ -74,7 +74,7 @@ project virtual environment. Make the repo URL reusable so a release bump
 touches one line:
 
 ```makefile
-SL_REPO ?= git+https://github.com/MistressFilth/supyrliminal@v0.2.0
+SL_REPO ?= git+https://github.com/MistressFilth/supyrliminal@v0.1.0
 
 lint: ## Run flake8 with SL+PYD selectors sourced from the supyrliminal repo
 	uvx --from "supyrliminal @ $(SL_REPO)" \
@@ -95,7 +95,7 @@ execs the entry on staged files. `uvx --from <url>` performs the same three
 steps on demand. Override the version without editing the Makefile:
 
 ```console
-make lint SL_REPO=git+https://github.com/MistressFilth/supyrliminal@v0.2.0
+make lint SL_REPO=git+https://github.com/MistressFilth/supyrliminal@v0.1.0
 ```
 
 ## Pre-commit
@@ -106,7 +106,7 @@ commit:
 ```yaml
 repos:
   - repo: https://github.com/MistressFilth/supyrliminal
-    rev: v0.2.0
+    rev: v0.1.0
     hooks:
       # Supyrliminal (SL) and PYD checks together.
       - id: supyrliminal
