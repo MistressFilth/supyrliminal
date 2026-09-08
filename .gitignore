@@ -27,7 +27,6 @@ venv/
 .reports/
 
 # uv
-uv.lock
 
 # VS Code
 .vscode/
