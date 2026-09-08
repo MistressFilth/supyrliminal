@@ -81,7 +81,6 @@ def _scan_ini(path: Path, source: str) -> list[GuidanceFinding]:
     if not parser.has_section("flake8"):
         return []
     flake8 = {k: parser.get("flake8", k) for k in parser.options("flake8")}
-    # find line of the per-file-ignores / extend-ignore key
     lines = source.splitlines()
     return _findings_from_flake8_table(flake8, path, default_line=1, lines=lines)
 
