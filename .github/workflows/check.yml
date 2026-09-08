@@ -21,6 +21,6 @@ jobs:
       - name: Typecheck
         run: make typecheck
       - name: Format check
-        run: uvx ruff format --check .
+        run: uv run ruff format --check .
       - name: Unit tests
         run: make unit-test
