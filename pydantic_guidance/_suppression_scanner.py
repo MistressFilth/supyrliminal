@@ -145,10 +145,15 @@ def scan_stale_registry(
     if mod is None:
         return []
     triggered = {f.code for f in analyzer_findings}
+    is_init = file_path.endswith(("__init__.py", "__init__.pyi"))
     findings: list[GuidanceFinding] = []
     for entry in registry.entries:
-        if not entry.fqn.startswith(mod + ".") and entry.fqn != mod:
-            continue
+        if is_init:
+            if entry.fqn != mod:
+                continue
+        else:
+            if not entry.fqn.startswith(mod + ".") and entry.fqn != mod:
+                continue
         if entry.code in triggered:
             continue
         findings.append(
