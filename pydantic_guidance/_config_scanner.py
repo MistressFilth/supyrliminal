@@ -43,13 +43,21 @@ def _normalize_string_or_list(value: object) -> str:
 
 
 def scan_config(path: Path, source: str) -> list[GuidanceFinding]:
-    """Scan a config file for PG/PYD suppressions."""
-    suffix = path.suffix.lower()
-    if suffix == ".toml":
+    """Scan a config file for PG/PYD suppressions.
+
+    Dispatch is by recognized filename rather than file suffix: flake8
+    uses the same key for ``setup.cfg``, ``tox.ini``, and ``.flake8``,
+    and only ``pyproject.toml`` has its own TOML table layout. Walking
+    on suffix would mis-classify a hypothetical ``flake8.ini`` as INI
+    when the file is actually a flake8 config, and would mis-handle a
+    ``.flake8`` file whose suffix is empty.
+    """
+    name = path.name
+    if name == "pyproject.toml":
         return _scan_pyproject(path, source)
     if path.name in _RECOGNIZED_NAMES:
         return _scan_ini(path, source)
-    if suffix in {".py", ".pyi"}:
+    if path.suffix.lower() in {".py", ".pyi"}:
         return _scan_python_inline(path, source)
     return []
 
