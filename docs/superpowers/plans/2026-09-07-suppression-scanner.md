@@ -112,12 +112,18 @@ def test_suppression_entry_missing_field_fails() -> None:
 
 def test_registry_rejects_duplicate_fqn_code() -> None:
     a = SuppressionEntry(
-        fqn="myapp.x", code="PG001", reason="r",
-        approved_by="alice", approved_sha="a",
+        fqn="myapp.x",
+        code="PG001",
+        reason="r",
+        approved_by="alice",
+        approved_sha="a",
     )
     b = SuppressionEntry(
-        fqn="myapp.x", code="PG001", reason="r2",
-        approved_by="bob", approved_sha="b",
+        fqn="myapp.x",
+        code="PG001",
+        reason="r2",
+        approved_by="bob",
+        approved_sha="b",
     )
     with pytest.raises(ValidationError):
         SuppressionRegistry(entries=(a, b))
@@ -125,12 +131,18 @@ def test_registry_rejects_duplicate_fqn_code() -> None:
 
 def test_registry_allows_distinct_codes_same_fqn() -> None:
     a = SuppressionEntry(
-        fqn="myapp.x", code="PG001", reason="r1",
-        approved_by="alice", approved_sha="a",
+        fqn="myapp.x",
+        code="PG001",
+        reason="r1",
+        approved_by="alice",
+        approved_sha="a",
     )
     b = SuppressionEntry(
-        fqn="myapp.x", code="PG002", reason="r2",
-        approved_by="alice", approved_sha="a",
+        fqn="myapp.x",
+        code="PG002",
+        reason="r2",
+        approved_by="alice",
+        approved_sha="a",
     )
     reg = SuppressionRegistry(entries=(a, b))
     assert len(reg.entries) == 2
@@ -178,7 +190,9 @@ class SuppressionRegistry(BaseModel):
 
     @pydantic.field_validator("entries")
     @classmethod
-    def _no_duplicate_pairs(cls, entries: tuple[SuppressionEntry, ...]) -> tuple[SuppressionEntry, ...]:
+    def _no_duplicate_pairs(
+        cls, entries: tuple[SuppressionEntry, ...]
+    ) -> tuple[SuppressionEntry, ...]:
         seen: set[tuple[str, str]] = set()
         for e in entries:
             key = (e.fqn, e.code)
@@ -279,11 +293,16 @@ def test_load_two_entries(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     reg = load(tmp_path)
-    assert {e.fqn for e in reg.entries} == {"myapp.legacy.parse", "myapp.adapters.X.run"}
+    assert {e.fqn for e in reg.entries} == {
+        "myapp.legacy.parse",
+        "myapp.adapters.X.run",
+    }
 
 
 def test_load_malformed_returns_empty(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text("this is not valid TOML [[[", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "this is not valid TOML [[[", encoding="utf-8"
+    )
     reg = load(tmp_path)
     assert reg.entries == ()
 ```
@@ -395,7 +414,9 @@ def test_module_path_simple() -> None:
 
 
 def test_module_path_init_py_collapsed() -> None:
-    assert module_path(Path("/repo/myapp/pkg/__init__.py"), Path("/repo")) == "myapp.pkg"
+    assert (
+        module_path(Path("/repo/myapp/pkg/__init__.py"), Path("/repo")) == "myapp.pkg"
+    )
 
 
 def test_module_path_outside_root() -> None:
@@ -413,21 +434,14 @@ def test_resolver_top_level_function() -> None:
 
 
 def test_resolver_method() -> None:
-    src = (
-        "class A:\n"
-        "    def m(self): pass\n"
-    )
+    src = "class A:\n    def m(self): pass\n"
     tree = _parse(src)
     r = FQNResolver(tree, "myapp.x")
     assert r.for_line(2) == "myapp.x.A.m"
 
 
 def test_resolver_nested_class() -> None:
-    src = (
-        "class A:\n"
-        "    class B:\n"
-        "        def c(self): pass\n"
-    )
+    src = "class A:\n    class B:\n        def c(self): pass\n"
     tree = _parse(src)
     r = FQNResolver(tree, "myapp.x")
     assert r.for_line(3) == "myapp.x.A.B.c"
@@ -440,11 +454,7 @@ def test_resolver_async_function() -> None:
 
 
 def test_resolver_decorator_targets_decorated_function() -> None:
-    src = (
-        "class A:\n"
-        "    @staticmethod\n"
-        "    def m(): pass\n"
-    )
+    src = "class A:\n    @staticmethod\n    def m(): pass\n"
     tree = _parse(src)
     r = FQNResolver(tree, "myapp.x")
     # Line 2 is the @staticmethod decorator, line 3 is `def m`.
@@ -763,7 +773,10 @@ def scan_comments(
         if not codes:
             findings.append(
                 GuidanceFinding(
-                    line=lineno, col=0, code="PG201", message=_PG201_MSG,
+                    line=lineno,
+                    col=0,
+                    code="PG201",
+                    message=_PG201_MSG,
                 )
             )
             continue
@@ -771,7 +784,9 @@ def scan_comments(
         if len(pg_pyd) >= 3:
             findings.append(
                 GuidanceFinding(
-                    line=lineno, col=0, code="PG202",
+                    line=lineno,
+                    col=0,
+                    code="PG202",
                     message=_PG202_MSG.format(n=len(pg_pyd)),
                 )
             )
@@ -779,6 +794,7 @@ def scan_comments(
         if registry is None or file_path is None or project_root is None:
             continue
         from pathlib import Path
+
         mod = module_path(Path(file_path), Path(project_root))
         if mod is None:
             continue
@@ -788,7 +804,9 @@ def scan_comments(
             if registry.find(fqn, code) is None:
                 findings.append(
                     GuidanceFinding(
-                        line=lineno, col=0, code="PG203",
+                        line=lineno,
+                        col=0,
+                        code="PG203",
                         message=_PG203_MSG.format(code=code, fqn=fqn),
                     )
                 )
@@ -810,6 +828,7 @@ def scan_stale_registry(
     FQN against the set of constructs the analyzer reported.
     """
     from pathlib import Path
+
     mod = module_path(Path(file_path), Path(project_root))
     if mod is None:
         return []
@@ -822,7 +841,9 @@ def scan_stale_registry(
             continue
         findings.append(
             GuidanceFinding(
-                line=1, col=0, code="PG204",
+                line=1,
+                col=0,
+                code="PG204",
                 message=_PG204_MSG.format(fqn=entry.fqn, code=entry.code),
             )
         )
@@ -883,20 +904,23 @@ def _registry(*entries: SuppressionEntry) -> SuppressionRegistry:
 
 
 def test_authorized_noqa_emits_no_pg203(root: Path) -> None:
-    src = (
-        "def parse():\n"
-        "    return 1  # noqa: PG001\n"
-    )
+    src = "def parse():\n    return 1  # noqa: PG001\n"
     file_path = str(root / "legacy.py")
     reg = _registry(
         SuppressionEntry(
-            fqn="proj.legacy.parse", code="PG001",
-            reason="r", approved_by="alice", approved_sha="abc",
+            fqn="proj.legacy.parse",
+            code="PG001",
+            reason="r",
+            approved_by="alice",
+            approved_sha="abc",
         )
     )
     findings = scan_comments(
-        ast.parse(src), src,
-        file_path=file_path, project_root=str(root), registry=reg,
+        ast.parse(src),
+        src,
+        file_path=file_path,
+        project_root=str(root),
+        registry=reg,
     )
     assert all(f.code != "PG203" for f in findings)
 
@@ -905,8 +929,10 @@ def test_unauthorized_noqa_emits_pg203(root: Path) -> None:
     src = "def parse():\n    return 1  # noqa: PG001\n"
     file_path = str(root / "legacy.py")
     findings = scan_comments(
-        ast.parse(src), src,
-        file_path=file_path, project_root=str(root),
+        ast.parse(src),
+        src,
+        file_path=file_path,
+        project_root=str(root),
         registry=SuppressionRegistry(),
     )
     pg203 = [f for f in findings if f.code == "PG203"]
@@ -919,29 +945,33 @@ def test_pyd_code_also_requires_registry(root: Path) -> None:
     src = "def parse():\n    return 1  # noqa: PYD001\n"
     file_path = str(root / "legacy.py")
     findings = scan_comments(
-        ast.parse(src), src,
-        file_path=file_path, project_root=str(root),
+        ast.parse(src),
+        src,
+        file_path=file_path,
+        project_root=str(root),
         registry=SuppressionRegistry(),
     )
     assert any(f.code == "PG203" for f in findings)
 
 
 def test_noqa_on_method_requires_method_fqn(root: Path) -> None:
-    src = (
-        "class A:\n"
-        "    def m(self):\n"
-        "        return 1  # noqa: PG001\n"
-    )
+    src = "class A:\n    def m(self):\n        return 1  # noqa: PG001\n"
     file_path = str(root / "x.py")
     reg = _registry(
         SuppressionEntry(
-            fqn="proj.x.A.m", code="PG001",
-            reason="r", approved_by="a", approved_sha="s",
+            fqn="proj.x.A.m",
+            code="PG001",
+            reason="r",
+            approved_by="a",
+            approved_sha="s",
         )
     )
     findings = scan_comments(
-        ast.parse(src), src,
-        file_path=file_path, project_root=str(root), registry=reg,
+        ast.parse(src),
+        src,
+        file_path=file_path,
+        project_root=str(root),
+        registry=reg,
     )
     assert all(f.code != "PG203" for f in findings)
 
@@ -949,8 +979,10 @@ def test_noqa_on_method_requires_method_fqn(root: Path) -> None:
 def test_file_outside_root_skips_pg203(root: Path) -> None:
     src = "def parse():\n    return 1  # noqa: PG001\n"
     findings = scan_comments(
-        ast.parse(src), src,
-        file_path="/elsewhere/x.py", project_root=str(root),
+        ast.parse(src),
+        src,
+        file_path="/elsewhere/x.py",
+        project_root=str(root),
         registry=SuppressionRegistry(),
     )
     # PG203 should NOT fire (cannot derive module path).
@@ -1008,12 +1040,17 @@ def root(tmp_path: Path) -> Path:
 
 def test_stale_entry_emits_pg204(root: Path) -> None:
     file_path = str(root / "x.py")
-    reg = SuppressionRegistry(entries=(
-        SuppressionEntry(
-            fqn="proj.x.go", code="PG001",
-            reason="r", approved_by="a", approved_sha="s",
-        ),
-    ))
+    reg = SuppressionRegistry(
+        entries=(
+            SuppressionEntry(
+                fqn="proj.x.go",
+                code="PG001",
+                reason="r",
+                approved_by="a",
+                approved_sha="s",
+            ),
+        )
+    )
     # Analyzer finds nothing — entry is stale.
     findings = scan_stale_registry(
         reg,
@@ -1026,12 +1063,17 @@ def test_stale_entry_emits_pg204(root: Path) -> None:
 
 def test_active_entry_emits_no_pg204(root: Path) -> None:
     file_path = str(root / "x.py")
-    reg = SuppressionRegistry(entries=(
-        SuppressionEntry(
-            fqn="proj.x.go", code="PG001",
-            reason="r", approved_by="a", approved_sha="s",
-        ),
-    ))
+    reg = SuppressionRegistry(
+        entries=(
+            SuppressionEntry(
+                fqn="proj.x.go",
+                code="PG001",
+                reason="r",
+                approved_by="a",
+                approved_sha="s",
+            ),
+        )
+    )
     findings = scan_stale_registry(
         reg,
         file_path=file_path,
@@ -1043,12 +1085,17 @@ def test_active_entry_emits_no_pg204(root: Path) -> None:
 
 def test_entry_for_different_module_ignored(root: Path) -> None:
     file_path = str(root / "x.py")
-    reg = SuppressionRegistry(entries=(
-        SuppressionEntry(
-            fqn="proj.other.go", code="PG001",
-            reason="r", approved_by="a", approved_sha="s",
-        ),
-    ))
+    reg = SuppressionRegistry(
+        entries=(
+            SuppressionEntry(
+                fqn="proj.other.go",
+                code="PG001",
+                reason="r",
+                approved_by="a",
+                approved_sha="s",
+            ),
+        )
+    )
     findings = scan_stale_registry(
         reg,
         file_path=file_path,
@@ -1096,10 +1143,7 @@ from pydantic_guidance._config_scanner import scan_config
 
 
 def test_pyproject_per_file_ignores_disables_pg(tmp_path: Path) -> None:
-    src = (
-        "[tool.flake8]\n"
-        "per-file-ignores = \"tests/*: PG001, PG002\"\n"
-    )
+    src = '[tool.flake8]\nper-file-ignores = "tests/*: PG001, PG002"\n'
     p = tmp_path / "pyproject.toml"
     p.write_text(src, encoding="utf-8")
     findings = scan_config(p, src)
@@ -1108,10 +1152,7 @@ def test_pyproject_per_file_ignores_disables_pg(tmp_path: Path) -> None:
 
 
 def test_pyproject_extend_ignore_disables_pyd(tmp_path: Path) -> None:
-    src = (
-        "[tool.flake8]\n"
-        'extend-ignore = "PG001, PYD001, E501"\n'
-    )
+    src = '[tool.flake8]\nextend-ignore = "PG001, PYD001, E501"\n'
     p = tmp_path / "pyproject.toml"
     p.write_text(src, encoding="utf-8")
     findings = scan_config(p, src)
@@ -1122,10 +1163,7 @@ def test_pyproject_extend_ignore_disables_pyd(tmp_path: Path) -> None:
 
 
 def test_pyproject_no_pg_disables_emits_nothing(tmp_path: Path) -> None:
-    src = (
-        "[tool.flake8]\n"
-        'extend-ignore = "E501, W391"\n'
-    )
+    src = '[tool.flake8]\nextend-ignore = "E501, W391"\n'
     p = tmp_path / "pyproject.toml"
     p.write_text(src, encoding="utf-8")
     findings = scan_config(p, src)
@@ -1133,11 +1171,7 @@ def test_pyproject_no_pg_disables_emits_nothing(tmp_path: Path) -> None:
 
 
 def test_setup_cfg_per_file_ignores(tmp_path: Path) -> None:
-    src = (
-        "[flake8]\n"
-        "per-file-ignores =\n"
-        "    tests/*: PG001, PYD001\n"
-    )
+    src = "[flake8]\nper-file-ignores =\n    tests/*: PG001, PYD001\n"
     p = tmp_path / "setup.cfg"
     p.write_text(src, encoding="utf-8")
     findings = scan_config(p, src)
@@ -1146,11 +1180,7 @@ def test_setup_cfg_per_file_ignores(tmp_path: Path) -> None:
 
 
 def test_flake8_ini_per_file_ignores(tmp_path: Path) -> None:
-    src = (
-        "[flake8]\n"
-        "per-file-ignores =\n"
-        "    legacy/*: PG003\n"
-    )
+    src = "[flake8]\nper-file-ignores =\n    legacy/*: PG003\n"
     p = tmp_path / ".flake8"
     p.write_text(src, encoding="utf-8")
     findings = scan_config(p, src)
@@ -1252,7 +1282,9 @@ def _scan_python_inline(path: Path, source: str) -> list[GuidanceFinding]:
         for code in _PG_PYD_CODE.findall(m.group(1)):
             findings.append(
                 GuidanceFinding(
-                    line=lineno, col=0, code="PG205",
+                    line=lineno,
+                    col=0,
+                    code="PG205",
                     message=_PG205_MSG.format(code=code, file=path.name),
                 )
             )
@@ -1260,7 +1292,10 @@ def _scan_python_inline(path: Path, source: str) -> list[GuidanceFinding]:
 
 
 def _findings_from_flake8_table(
-    flake8: dict, path: Path, default_line: int, lines: list[str] | None = None,
+    flake8: dict,
+    path: Path,
+    default_line: int,
+    lines: list[str] | None = None,
 ) -> list[GuidanceFinding]:
     findings: list[GuidanceFinding] = []
     extend_ignore = str(flake8.get("extend-ignore", ""))
@@ -1268,13 +1303,16 @@ def _findings_from_flake8_table(
         line = _line_of(lines, "extend-ignore") if lines else default_line
         findings.append(
             GuidanceFinding(
-                line=line, col=0, code="PG205",
+                line=line,
+                col=0,
+                code="PG205",
                 message=_PG205_MSG.format(code=code, file=path.name),
             )
         )
     per_file_ignores = str(flake8.get("per-file-ignores", ""))
     for match in re.finditer(
-        r"([^\n:]+):\s*([^\n]+)", per_file_ignores,
+        r"([^\n:]+):\s*([^\n]+)",
+        per_file_ignores,
     ):
         globs = match.group(1)
         codes_blob = match.group(2)
@@ -1282,9 +1320,12 @@ def _findings_from_flake8_table(
         for code in _PG_PYD_CODE.findall(codes_blob):
             findings.append(
                 GuidanceFinding(
-                    line=line, col=0, code="PG205",
+                    line=line,
+                    col=0,
+                    code="PG205",
                     message=_PG205_MSG.format(
-                        code=code, file=f"{path.name} ({globs.strip()})",
+                        code=code,
+                        file=f"{path.name} ({globs.strip()})",
                     ),
                 )
             )
@@ -1463,14 +1504,12 @@ class PGPlugin:
             findings.extend(self._run_python())
 
         for f in findings:
-            yield RESULT_ADAPTER.validate_python(
-                (f.line, f.col, f.message, type(self))
-            )
+            yield RESULT_ADAPTER.validate_python((f.line, f.col, f.message, type(self)))
 
     def _is_config(self) -> bool:
-        return (
-            self._filename.endswith(_CONFIG_SUFFIXES)
-            or any(self._filename.endswith("/" + n) or self._filename.endswith(n) for n in _CONFIG_NAMES)
+        return self._filename.endswith(_CONFIG_SUFFIXES) or any(
+            self._filename.endswith("/" + n) or self._filename.endswith(n)
+            for n in _CONFIG_NAMES
         )
 
     def _run_python(self) -> Iterator[GuidanceFinding]:
@@ -1897,12 +1936,17 @@ def step_empty_registry(ctx: dict) -> None:
 
 @given("a registry entry authorizing <fqn> / <code>")
 def step_registry_entry(ctx: dict, fqn: str, code: str) -> None:
-    ctx["registry"] = SuppressionRegistry(entries=(
-        SuppressionEntry(
-            fqn=fqn, code=code, reason="r",
-            approved_by="alice", approved_sha="abc",
-        ),
-    ))
+    ctx["registry"] = SuppressionRegistry(
+        entries=(
+            SuppressionEntry(
+                fqn=fqn,
+                code=code,
+                reason="r",
+                approved_by="alice",
+                approved_sha="abc",
+            ),
+        )
+    )
 
 
 @given("a pyproject.toml with:")
@@ -1921,12 +1965,16 @@ def step_scan(ctx: dict) -> None:
         tree = ast.parse(source)
         analyzer_findings: list[GuidanceFinding] = []  # PG001-003 not exercised here
         ctx["findings"] = scan_comments(
-            tree, source,
-            file_path=filename, project_root=root,
-            registry=registry, analyzer_findings=analyzer_findings,
+            tree,
+            source,
+            file_path=filename,
+            project_root=root,
+            registry=registry,
+            analyzer_findings=analyzer_findings,
         ) + scan_stale_registry(
             registry,
-            file_path=filename, project_root=root,
+            file_path=filename,
+            project_root=root,
             analyzer_findings=analyzer_findings,
         )
     elif filename.endswith(".toml"):
